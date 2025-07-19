@@ -1,0 +1,15 @@
+# docker-compose.yml for TypingMind MCP
+version: '3.8'
+services:
+  app:
+    build: .
+    container_name: typingmind-mcp
+    ports:
+      - "${PORT}:${PORT}"
+    restart: always
+    environment:
+      # These variables are passed from the Elest.io UI to the container.
+      # The application specifically requires MCP_AUTH_TOKEN.
+      - PORT=${PORT}
+      - MCP_AUTH_TOKEN=${MCP_AUTH_TOKEN}
+      - CORS_ORIGIN=${CORS_ORIGIN}
