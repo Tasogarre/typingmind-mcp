@@ -1,0 +1,11 @@
+# elestio.yml for TypingMind MCP
+config:
+  compose_path: ./docker-compose.yml
+ports:
+  - "app:3000:3000:true" # Expose MCP app UI
+variables:
+  - name: PORT
+    description: "External port to map to the container's port 3000."
+    type: "number"
+    required: true
+    default: 3040
