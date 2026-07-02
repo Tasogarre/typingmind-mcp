@@ -1,0 +1,58 @@
+name: Sync Fork with Upstream (Clean Room Build Method)
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - name: Checkout Fork for Custom Files
+        uses: actions/checkout@v4
+        with:
+          path: fork
+
+      - name: Checkout Upstream into Clean Room
+        uses: actions/checkout@v4
+        with:
+          repository: 'TypingMind/typingmind-mcp'
+          ref: main
+          path: upstream
+
+      - name: Apply Custom Config and Clean Workflows
+        run: |
+          echo "Copying custom Elest.io files..."
+          cp fork/docker-compose.yml upstream/docker-compose.yml
+          cp fork/elestio.yml upstream/elestio.yml
+          
+          echo "Cleaning upstream workflows directory..."
+          rm -rf upstream/.github/workflows/*
+          
+          echo "Ensuring workflows directory exists and copying our own sync file..."
+          mkdir -p upstream/.github/workflows
+          cp fork/.github/workflows/sync.yml upstream/.github/workflows/sync.yml
+          
+      - name: Push Cleaned Build to Fork
+        run: |
+          cd upstream
+          git config --global user.name 'GitHub Actions Sync'
+          git config --global user.email 'actions-sync@github.com'
+          git add -A
+          if ! git diff --staged --quiet; then
+            git commit -m "Build: Sync with upstream and apply custom configuration"
+          else
+            echo "No changes to commit. Fork is already up to date."
+          fi
+          git push -f "https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git" HEAD:main
+
+      - name: Create Issue on Failure
+        if: failure()
+        run: |
+          echo "An error occurred. Creating issue in ${{ github.repository }}."
+          cd ${{ github.workspace }}
+          gh issue create --repo ${{ github.repository }} --title "Automated Sync Failed: Manual Intervention Required" --body "The automated sync workflow failed. Please review the failed workflow run for logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
